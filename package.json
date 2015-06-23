@@ -9,7 +9,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "mocha": "^2.2.5",
     "pg": "^4.4.0",
-    "restify": "^3.0.3"
+    "promise": "^7.0.3",
+    "restify": "^3.0.3",
+    "validator": "^3.40.1"
   }
 }
