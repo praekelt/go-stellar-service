@@ -5,14 +5,15 @@ var TransactionController = require('./controllers/transaction');
 
 var server = Restify.createServer();
 
-server.use(restify.jsonp());
-server.use(restify.bodyParser({ mapParams: true});
+server.use(Restify.acceptParser(server.acceptable));
+server.use(Restify.jsonp());
+server.use(Restify.bodyParser({ mapParams: true}));
 
 
 server.post('/v1/wallet', WalletController.create);
 server.get('/v1/wallet', WalletController.fetch);
 
-server.post('/v1/transaction/:frommsisdn/:tomsisdn', TransactionController.send);
+server.post('/v1/transaction/', TransactionController.send);
 
 server.listen(Config.PORT, function() {
 	console.log('Listening for requests');

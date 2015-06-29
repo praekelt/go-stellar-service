@@ -22,7 +22,7 @@ var wallet = {
 		});
 	},
     fetch: function(msisdn, pin) {
-        var auth = 'Basic '+new Buffer(msisdn+':'+pin+'1').toString('base64');
+        var auth = 'Basic '+new Buffer(msisdn+':'+pin).toString('base64');
 		return new Promise(function(resolve, reject) {
 			var wallet_request = Http.request({
 				hostname: Config.WALLET_SERVER,

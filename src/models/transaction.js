@@ -1,8 +1,8 @@
 var Stellar = require('js-stellar-lib');
-var WalletModel = require('models/wallet');
+var WalletModel = require('./wallet');
 var Config = require('../config');
 var Sequelize = require('sequelize');
-var sequelize = require('models/db').sequelize;
+var sequelize = require('./db').sequelize;
 
 var Transaction = {
     Transaction: sequelize.define('transaction', {
@@ -23,36 +23,45 @@ var Transaction = {
         },
         state: {
             type: Sequelize.ENUM('pending', 'success', 'fail')
-        }
+        },
+        transactionhash: {
+            type: Sequelize.STRING
+        },
+        transactionresult: {
+            type: Sequelize.STRING
+        },
     }),
 
-    create: function(frommsisdn, tomsisdn, amount) {
-        var stellar = new Stellar.Server({
-            hostname: Config.STELLAR_HORIZON_SERVER,
-            port: Config.STELLAR_HORIZON_PORT,
-        });
+    create: function(frommsisdn, frompin, tomsisdn, amount) {
+        var stellar = new Stellar.Server(Config.HORIZON);
 
         // fetch frommsisdn's wallet data and put it here
         var walletData;
         // tomsisdn't corresponding address 
-        var toaddress;
+        var toAddress, stellarAccount;
 
-        return WalletModel.fetch(auth.msisdn, auth.pin)
+        return WalletModel.fetch(frommsisdn, frompin)
             .then(function(receivedWalletData) {
-                walletData = receivedWalletData;
+                walletData = JSON.parse(receivedWalletData);
+                return WalletModel.fetchAddress(tomsisdn);
+            })
+            .then(function(receivedToAddress) {
+                if (!receivedToAddress)
+                    return Promise.fail('could not receive to address');
+                toAddress = JSON.parse(receivedToAddress).address;
                 return stellar.loadAccount(walletData.address);
             })
-            .then(WalletModel.fetchAddress(tomsisdn))
-            .then(function(toaddressdata) {
+            .then(function(receivedStellarAccount) {
+                stellarAccount = receivedStellarAccount;
 
-            })
-            .then(function(stellarAccount) {
                 var stellarKeypair = new Stellar.Keypair({
-                    secretKey: walletData.privateKey,
-                    publicKey: walletData.publicKey
+                    secretKey: new Buffer(walletData.privatekey, 'base64'),
+                    publicKey: new Buffer(walletData.publickey, 'base64'),
+                    secretSeed: 'do not actually have the secret seed'
                 });
                 var transaction = new Stellar.TransactionBuilder(stellarAccount)
                     .addOperation(Stellar.Operation.payment({
+                        destination: toAddress,
                         currency: Stellar.Currency.native(),
                         amount: amount
                     }))
@@ -63,14 +72,15 @@ var Transaction = {
             .then(function(transaction) {
                 // create pending transaction row in table
                 // TODO we should watch this transaction for updates and notify interested parties
-                return this.Transaction.create({
+                return Transaction.Transaction.create({
                     frommsisdn: frommsisdn,
                     tomsisdn: tomsisdn,
                     amount: amount,
                     currency: 'NATIVE',
                     fee: transaction.feeCharged,
-                    state: 'pending
+                    state: 'pending'
                 });
             });
     }
 };
+module.exports = Transaction;
