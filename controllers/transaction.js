@@ -1,7 +1,5 @@
-var WalletModel = require('models/wallet');
+var TransactionModel = require('models/transaction');
 var ControllerUtils = require('./util');
-var Stellar = require('js-stellar-lib');
-var Config = require('../config');
 
 var Transaction = {
     send: function send(req, res, next) {
@@ -13,32 +11,20 @@ var Transaction = {
         if (auth.error_message) {
             // AAHHH
             throw new Error(auth.error_message);
+            res.send(JSON.stringify({
+                submitted: false,
+                error_message: auth.error_message
+            }));
         }
 
-        var stellar = new Stellar.Server({
-            hostname: Config.STELLAR_HORIZON_SERVER,
-            port: Config.STELLAR_HORIZON_PORT,
-        });
-
-        var walletData;
-
-        return WalletModel.fetch(auth.msisdn, auth.pin)
-            .then(function(receivedWalletData) {
-                walletData = receivedWalletData;
-                return stellar.loadAccount(walletData.address);
-            }).then(function(stellarAccount) {
-                var stellarKeypair = new Stellar.Keypair({
-                    secretKey: walletData.privateKey,
-                    publicKey: walletData.publicKey
-                });
-                var transaction = new Stellar.TransactionBuilder(stellarAccount)
-                    .addOperation(Stellar.Operation.payment({
-                        currency: Stellar.Currency.native(),
-                        amount: amount
-                    })
-                    .build();
-                transaction.addSignature(transaction.sign(stellarKeypair));
-                return stellar.submitTransaction(transaction);
+        TransactionModel.create(fromMsisdn, toMsisdn, amount)
+            .then(function() {
+                res.send(JSON.stringify({submitted: true}));
+                next();
+            }).catch(function() {
+                res.send(JSON.stringify({submitted: false}));
+                next();
             });
     }
 };
+module.exports = Transaction;
