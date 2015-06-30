@@ -35,11 +35,7 @@ var wallet = {
 			function(res) {
 				res.on('data', function(data) {
                     var wallet_data = JSON.parse(data.toString());
-                    if(wallet_data.error_message) {
-                        reject(wallet_data);
-                    } else {
-                        resolve(wallet_data);
-                    }
+                    resolve(wallet_data);
 				});
                 res.on('error', function(data) {
                     console.error(data);
