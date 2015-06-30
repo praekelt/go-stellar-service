@@ -65,7 +65,7 @@ var Payment = {
                     return Promise.reject(new PaymentError(
                         'Error fetching toMsisdn wallet '+toAddressData.error_message));
                 }
-                var toAddress = toAddressData.address;
+                toAddress = toAddressData.address;
 
                 return stellar.loadAccount(walletData.address);
             })
