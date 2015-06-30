@@ -17,7 +17,6 @@ var Payment = {
         var auth = ControllerUtils.parseAuthorizationHeader(req, fromMsisdn);
         if (auth.error_message) {
             // AAHHH
-            throw new Error(auth.error_message);
             res.send({
                 submitted: false,
                 error_message: auth.error_message
@@ -27,17 +26,16 @@ var Payment = {
         PaymentModel.create(fromMsisdn, auth.pin, toMsisdn, amount)
             .then(function(result) {
                 res.send({submitted: true});
+                // only deal with the next request once we're done with this
                 next();
-            }).catch(
-                function(error) {
-                    var message = 'Unknown error occurred';
-                    if (error instanceof PaymentModel.PaymentError) {
-                        message = error.message;
-                    }
-                    res.send({submitted: false, error_message: message});
-                    next();
+            }).catch(function(error) {
+                var message = 'Unknown error occurred';
+                if (error instanceof PaymentModel.PaymentError) {
+                    message = error.message;
                 }
-            );
+                res.send({submitted: false, error_message: message});
+                next();
+            });
     }
 };
 module.exports = Payment;
