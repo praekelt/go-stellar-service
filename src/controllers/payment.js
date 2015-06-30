@@ -1,7 +1,7 @@
-var TransactionModel = require('../models/transaction');
+var PaymentModel = require('../models/payment');
 var ControllerUtils = require('./util');
 
-var Transaction = {
+var Payment = {
     send: function send(req, res, next) {
         var fromMsisdn = req.params['frommsisdn'];
         var toMsisdn = req.params['tomsisdn'];
@@ -24,14 +24,14 @@ var Transaction = {
             }));
         }
 
-        TransactionModel.create(fromMsisdn, auth.pin, toMsisdn, amount)
+        PaymentModel.create(fromMsisdn, auth.pin, toMsisdn, amount)
             .then(function(result) {
                 res.send(JSON.stringify({submitted: true}));
                 next();
             }).catch(
                 function(error) {
                     var message = 'Unknown error occurred';
-                    if (error instanceof TransactionModel.TransactionError) {
+                    if (error instanceof PaymentModel.PaymentError) {
                         message = error.message;
                     }
                     res.send(JSON.stringify({submitted: false, error_message: message}));
@@ -40,4 +40,4 @@ var Transaction = {
             );
     }
 };
-module.exports = Transaction;
+module.exports = Payment;

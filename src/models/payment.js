@@ -4,15 +4,15 @@ var Config = require('../config');
 var Sequelize = require('sequelize');
 var sequelize = require('./db').sequelize;
 
-function TransactionError(message) {
+function PaymentError(message) {
     this.message = message;
 }
-TransactionError.prototype = Object.create(Error.prototype);
+PaymentError.prototype = Object.create(Error.prototype);
 
-var Transaction = {
-    TransactionError: TransactionError,
+var Payment = {
+    PaymentError: PaymentError,
 
-    Transaction: sequelize.define('transaction', {
+    Payment: sequelize.define('payment', {
         frommsisdn: {
             type: Sequelize.STRING
         },
@@ -31,10 +31,10 @@ var Transaction = {
         state: {
             type: Sequelize.ENUM('pending', 'success', 'fail')
         },
-        transactionhash: {
+        paymenthash: {
             type: Sequelize.STRING
         },
-        transactionresult: {
+        paymentresult: {
             type: Sequelize.STRING
         },
     }),
@@ -52,17 +52,17 @@ var Transaction = {
                 console.log(receivedWalletData);
                 var error =  receivedWalletData.message || receivedWalletData.error_message;
                 if (error) {
-                    return Promise.reject(new TransactionError(error));
+                    return Promise.reject(new PaymentError(error));
                 }
                 walletData = receivedWalletData;
                 return WalletModel.fetchAddress(tomsisdn);
             })
             .then(function(receivedToAddress) {
                 if (!receivedToAddress)
-                    return Promise.reject(new TransactionError('Error fetching wallets'));
+                    return Promise.reject(new PaymentError('Error fetching wallets'));
                 var toAddressData = receivedToAddress;
                 if (toAddressData.error_message) {
-                    return Promise.reject(new TransactionError(
+                    return Promise.reject(new PaymentError(
                         'Error fetching toMsisdn wallet '+toAddressData.error_message));
                 }
                 var toAddress = toAddressData.address;
@@ -79,33 +79,33 @@ var Transaction = {
                     publicKey: new Buffer(walletData.publickey, 'base64'),
                     secretSeed: 'do not actually have the secret seed'
                 });
-                var transaction = new Stellar.TransactionBuilder(stellarAccount)
+                var payment = new Stellar.PaymentBuilder(stellarAccount)
                     .addOperation(Stellar.Operation.payment({
                         destination: toAddress,
                         currency: Stellar.Currency.native(),
                         amount: amount
                     }))
                     .build();
-                transaction.addSignature(transaction.sign(stellarKeypair));
-                return stellar.submitTransaction(transaction);
+                payment.addSignature(payment.sign(stellarKeypair));
+                return stellar.submitPayment(payment);
             })
-            .then(function(transaction) {
-                // create pending transaction row in table
-                // TODO we should watch this transaction for updates and notify interested parties
-                if(transaction.error) {
-                    return Promise.reject(new TransactionError(transaction.error));
+            .then(function(payment) {
+                // create pending payment row in table
+                // TODO we should watch this payment for updates and notify interested parties
+                if(payment.error) {
+                    return Promise.reject(new PaymentError(payment.error));
                 }
-                return Transaction.Transaction.create({
-                    transactionhash: transaction.hash,
-                    transactionresult: transaction.result,
+                return Payment.Payment.create({
+                    paymenthash: payment.hash,
+                    paymentresult: payment.result,
                     frommsisdn: frommsisdn,
                     tomsisdn: tomsisdn,
                     amount: amount,
                     currency: 'NATIVE',
-                    fee: transaction.feeCharged,
+                    fee: payment.feeCharged,
                     state: 'pending'
                 });
             });
     }
 };
-module.exports = Transaction;
+module.exports = Payment;
