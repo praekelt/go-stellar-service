@@ -49,7 +49,6 @@ var Payment = {
 
         return WalletModel.fetch(frommsisdn, frompin)
             .then(function(receivedWalletData) {
-                console.log(receivedWalletData);
                 var error =  receivedWalletData.message || receivedWalletData.error_message;
                 if (error) {
                     return Promise.reject(new PaymentError(error));
@@ -70,8 +69,6 @@ var Payment = {
                 return stellar.loadAccount(walletData.address);
             })
             .then(function(receivedStellarAccount) {
-                console.log('received stellar account');
-                console.log(receivedStellarAccount);
                 stellarAccount = receivedStellarAccount;
 
                 var stellarKeypair = new Stellar.Keypair({
