@@ -67,7 +67,6 @@ var wallet = {
                     }
 				});
                 res.on('error', function(data) {
-                    console.error(data);
                     reject(data);
                 });
 			});

@@ -4,7 +4,14 @@ var Config = require('../config');
 var Sequelize = require('sequelize');
 var sequelize = require('./db').sequelize;
 
+function TransactionError(message) {
+    this.message = message;
+}
+TransactionError.prototype = Object.create(Error.prototype);
+
 var Transaction = {
+    TransactionError: TransactionError,
+
     Transaction: sequelize.define('transaction', {
         frommsisdn: {
             type: Sequelize.STRING
@@ -42,16 +49,29 @@ var Transaction = {
 
         return WalletModel.fetch(frommsisdn, frompin)
             .then(function(receivedWalletData) {
-                walletData = JSON.parse(receivedWalletData);
+                console.log(receivedWalletData);
+                var error =  receivedWalletData.message || receivedWalletData.error_message;
+                if (error) {
+                    return Promise.reject(new TransactionError(error));
+                }
+                walletData = receivedWalletData;
                 return WalletModel.fetchAddress(tomsisdn);
             })
             .then(function(receivedToAddress) {
                 if (!receivedToAddress)
-                    return Promise.fail('could not receive to address');
-                toAddress = JSON.parse(receivedToAddress).address;
+                    return Promise.reject(new TransactionError('Error fetching wallets'));
+                var toAddressData = receivedToAddress;
+                if (toAddressData.error_message) {
+                    return Promise.reject(new TransactionError(
+                        'Error fetching toMsisdn wallet '+toAddressData.error_message));
+                }
+                var toAddress = toAddressData.address;
+
                 return stellar.loadAccount(walletData.address);
             })
             .then(function(receivedStellarAccount) {
+                console.log('received stellar account');
+                console.log(receivedStellarAccount);
                 stellarAccount = receivedStellarAccount;
 
                 var stellarKeypair = new Stellar.Keypair({
@@ -72,7 +92,12 @@ var Transaction = {
             .then(function(transaction) {
                 // create pending transaction row in table
                 // TODO we should watch this transaction for updates and notify interested parties
+                if(transaction.error) {
+                    return Promise.reject(new TransactionError(transaction.error));
+                }
                 return Transaction.Transaction.create({
+                    transactionhash: transaction.hash,
+                    transactionresult: transaction.result,
                     frommsisdn: frommsisdn,
                     tomsisdn: tomsisdn,
                     amount: amount,

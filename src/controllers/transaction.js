@@ -7,6 +7,13 @@ var Transaction = {
         var toMsisdn = req.params['tomsisdn'];
         var amount = req.params['amount'];
 
+        if(!fromMsisdn || !toMsisdn || !amount) {
+            res.send(JSON.stringify({
+                submitted: false,
+                error_message:  'your msisdn or amounts are invalid'
+            }));
+        }
+
         var auth = ControllerUtils.parseAuthorizationHeader(req, fromMsisdn);
         if (auth.error_message) {
             // AAHHH
@@ -19,16 +26,18 @@ var Transaction = {
 
         TransactionModel.create(fromMsisdn, auth.pin, toMsisdn, amount)
             .then(function(result) {
-                console.log('trnsaction stuff');
-                console.log(result);
                 res.send(JSON.stringify({submitted: true}));
                 next();
-            }).catch(function(error) {
-                console.log('failure :(')
-                console.log(error);
-                res.send(JSON.stringify({submitted: false}));
-                next();
-            });
+            }).catch(
+                function(error) {
+                    var message = 'Unknown error occurred';
+                    if (error instanceof TransactionModel.TransactionError) {
+                        message = error.message;
+                    }
+                    res.send(JSON.stringify({submitted: false, error_message: message}));
+                    next();
+                }
+            );
     }
 };
 module.exports = Transaction;
