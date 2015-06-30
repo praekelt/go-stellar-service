@@ -8,25 +8,25 @@ var Payment = {
         var amount = req.params['amount'];
 
         if(!fromMsisdn || !toMsisdn || !amount) {
-            res.send(JSON.stringify({
+            res.send({
                 submitted: false,
                 error_message:  'your msisdn or amounts are invalid'
-            }));
+            });
         }
 
         var auth = ControllerUtils.parseAuthorizationHeader(req, fromMsisdn);
         if (auth.error_message) {
             // AAHHH
             throw new Error(auth.error_message);
-            res.send(JSON.stringify({
+            res.send({
                 submitted: false,
                 error_message: auth.error_message
-            }));
+            });
         }
 
         PaymentModel.create(fromMsisdn, auth.pin, toMsisdn, amount)
             .then(function(result) {
-                res.send(JSON.stringify({submitted: true}));
+                res.send({submitted: true});
                 next();
             }).catch(
                 function(error) {
@@ -34,7 +34,7 @@ var Payment = {
                     if (error instanceof PaymentModel.PaymentError) {
                         message = error.message;
                     }
-                    res.send(JSON.stringify({submitted: false, error_message: message}));
+                    res.send({submitted: false, error_message: message});
                     next();
                 }
             );
