@@ -102,6 +102,12 @@ var Payment = {
                     fee: payment.feeCharged,
                     state: 'pending'
                 });
+            })
+            .then(function(dbResult) {
+                if (!dbResult.dataValues) {
+                    return Promise.reject('transaction not submitted to db but sent to stellar.. whoops');
+                }
+                return Promise.resolve('yaay');
             });
     }
 };
