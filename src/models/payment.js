@@ -13,10 +13,10 @@ var Payment = {
     PaymentError: PaymentError,
 
     Payment: sequelize.define('payment', {
-        frommsisdn: {
+        from_msisdn: {
             type: Sequelize.STRING
         },
-        tomsisdn: {
+        to_msisdn: {
             type: Sequelize.STRING
         },
         amount: {
@@ -31,60 +31,60 @@ var Payment = {
         state: {
             type: Sequelize.ENUM('pending', 'success', 'fail')
         },
-        paymenthash: {
+        payment_hash: {
             type: Sequelize.STRING
         },
-        paymentresult: {
+        payment_result: {
             type: Sequelize.STRING
         },
     }),
 
-    create: function(frommsisdn, frompin, tomsisdn, amount) {
+    create: function(from_msisdn, from_pin, to_msisdn, amount) {
         var stellar = new Stellar.Server(Config.HORIZON);
 
-        // fetch frommsisdn's wallet data and put it here
-        var walletData;
-        // tomsisdn't corresponding address 
+        // fetch from_msisdn's wallet data and put it here
+        var wallet_data;
+        // to_msisdn't corresponding address 
         var toAddress, stellarAccount;
 
-        return WalletModel.fetch(frommsisdn, frompin)
-            .then(function(receivedWalletData) {
-                var error =  receivedWalletData.message || receivedWalletData.error_message;
+        return WalletModel.fetch(from_msisdn, from_pin)
+            .then(function(received_wallet_data) {
+                var error =  received_wallet_data.message || received_wallet_data.error_message;
                 if (error) {
                     return Promise.reject(new PaymentError(error));
                 }
-                walletData = receivedWalletData;
-                return WalletModel.fetchAddress(tomsisdn);
+                wallet_data = received_wallet_data;
+                return WalletModel.fetchAddress(to_msisdn);
             })
-            .then(function(receivedToAddress) {
-                if (!receivedToAddress)
+            .then(function(received_to_address) {
+                if (!received_to_address)
                     return Promise.reject(new PaymentError('Error fetching wallets'));
-                var toAddressData = receivedToAddress;
-                if (toAddressData.error_message) {
+                var to_address_data = received_to_address;
+                if (to_address_data.error_message) {
                     return Promise.reject(new PaymentError(
-                        'Error fetching toMsisdn wallet '+toAddressData.error_message));
+                        'Error fetching to_msisdn wallet '+to_address_data.error_message));
                 }
-                toAddress = toAddressData.address;
+                toAddress = to_address_data.address;
 
-                return stellar.loadAccount(walletData.address);
+                return stellar.loadAccount(wallet_data.address);
             })
-            .then(function(receivedStellarAccount) {
-                stellarAccount = receivedStellarAccount;
+            .then(function(received_stellar_account) {
+                stellarAccount = received_stellar_account;
 
-                var stellarKeypair = new Stellar.Keypair({
-                    secretKey: new Buffer(walletData.privatekey, 'base64'),
-                    publicKey: new Buffer(walletData.publickey, 'base64'),
+                var stellar_keypair = new Stellar.Keypair({
+                    secretKey: new Buffer(wallet_data.privatekey, 'base64'),
+                    publicKey: new Buffer(wallet_data.publickey, 'base64'),
                     secretSeed: 'do not actually have the secret seed'
                 });
-                var payment = new Stellar.PaymentBuilder(stellarAccount)
+                var payment = new Stellar.TransactionBuilder(stellarAccount)
                     .addOperation(Stellar.Operation.payment({
                         destination: toAddress,
                         currency: Stellar.Currency.native(),
                         amount: amount
                     }))
                     .build();
-                payment.addSignature(payment.sign(stellarKeypair));
-                return stellar.submitPayment(payment);
+                payment.addSignature(payment.sign(stellar_keypair));
+                return stellar.submitTransaction(payment);
             })
             .then(function(payment) {
                 // create pending payment row in table
@@ -93,10 +93,10 @@ var Payment = {
                     return Promise.reject(new PaymentError(payment.error));
                 }
                 return Payment.Payment.create({
-                    paymenthash: payment.hash,
-                    paymentresult: payment.result,
-                    frommsisdn: frommsisdn,
-                    tomsisdn: tomsisdn,
+                    payment_hash: payment.hash,
+                    payment_result: payment.result,
+                    from_msisdn: from_msisdn,
+                    to_msisdn: to_msisdn,
                     amount: amount,
                     currency: 'NATIVE',
                     fee: payment.feeCharged,
