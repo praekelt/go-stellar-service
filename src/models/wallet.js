@@ -2,13 +2,7 @@ var Promise = require('promise');
 var Http = require('http');
 var Config = require('../config');
 
-function Wallet(
-    msisdn,
-    private_key,
-    public_key) {
-}
-
-var wallet = {
+var WalletModel = {
     create: function(msisdn, pin) {
         return Promise.resolve(function(resolve, reject) {
             var wallet_request = Http.request({
@@ -70,4 +64,4 @@ var wallet = {
         });
     }
 };
-module.exports = wallet;
+module.exports = WalletModel;

@@ -1,7 +1,7 @@
 var PaymentModel = require('../models/payment');
 var ControllerUtils = require('./util');
 
-var Payment = {
+var PaymentController = {
     send: function send(req, res, next) {
         var from_msisdn = req.params['frommsisdn'];
         var to_msisdn = req.params['tomsisdn'];
@@ -44,4 +44,4 @@ var Payment = {
             });
     }
 };
-module.exports = Payment;
+module.exports = PaymentController;

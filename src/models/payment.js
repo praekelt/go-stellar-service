@@ -9,7 +9,7 @@ function PaymentError(message) {
 }
 PaymentError.prototype = Object.create(Error.prototype);
 
-var Payment = {
+var PaymentModel = {
     PaymentError: PaymentError,
 
     Payment: sequelize.define('payment', {
@@ -111,4 +111,4 @@ var Payment = {
             });
     }
 };
-module.exports = Payment;
+module.exports = PaymentModel;
