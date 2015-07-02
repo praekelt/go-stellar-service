@@ -3,6 +3,7 @@ var WalletModel = require('./wallet');
 var Config = require('../config');
 var Sequelize = require('sequelize');
 var sequelize = require('./db').sequelize;
+var stellar = require('./stellar').stellar;
 
 function PaymentError(message) {
     this.message = message;
@@ -40,12 +41,10 @@ var PaymentModel = {
     }),
 
     create: function(from_msisdn, from_pin, to_msisdn, amount) {
-        var stellar = new Stellar.Server(Config.HORIZON);
-
         // fetch from_msisdn's wallet data and put it here
         var wallet_data;
         // to_msisdn't corresponding address 
-        var toAddress, stellarAccount;
+        var to_address, stellar_account;
 
         return WalletModel.fetch(from_msisdn, from_pin)
             .then(function(received_wallet_data) {
@@ -64,21 +63,22 @@ var PaymentModel = {
                     return Promise.reject(new PaymentError(
                         'Error fetching to_msisdn wallet '+to_address_data.error_message));
                 }
-                toAddress = to_address_data.address;
+                to_address = to_address_data.address;
 
                 return stellar.loadAccount(wallet_data.address);
             })
             .then(function(received_stellar_account) {
-                stellarAccount = received_stellar_account;
+                stellar_account = received_stellar_account;
 
                 var stellar_keypair = new Stellar.Keypair({
                     secretKey: new Buffer(wallet_data.privatekey, 'base64'),
                     publicKey: new Buffer(wallet_data.publickey, 'base64'),
                     secretSeed: 'do not actually have the secret seed'
                 });
-                var payment = new Stellar.TransactionBuilder(stellarAccount)
+;
+                var payment = new Stellar.TransactionBuilder(stellar_account)
                     .addOperation(Stellar.Operation.payment({
-                        destination: toAddress,
+                        destination: to_address,
                         currency: Stellar.Currency.native(),
                         amount: amount
                     }))
@@ -92,7 +92,7 @@ var PaymentModel = {
                 if(payment.error) {
                     return Promise.reject(new PaymentError(payment.error));
                 }
-                return Payment.Payment.create({
+                return PaymentModel.Payment.create({
                     payment_hash: payment.hash,
                     payment_result: payment.result,
                     from_msisdn: from_msisdn,
