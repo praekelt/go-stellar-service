@@ -1,3 +1,6 @@
+var Http = require('http');
+var Config = require('../config');
+
 var Utils = {
     parseAuthorizationHeader: function(req, msisdn) {
         var error_message = '';
@@ -25,5 +28,27 @@ var Utils = {
             pin: auth_header_decoded[1]
         };
     },
+
+    wallet_proxy: function(path, method) {
+        return function(req, res, next) {
+            var http_request = Http.request({
+                hostname: Config.WALLET_SERVER,
+                port: Config.WALLET_PORT,
+                method: method,
+                path: path,
+                headers: req.headers
+            },
+            function(http_res) {
+                http_res.on('data', function(data) {
+                    res.send(http_res.statusCode, JSON.parse(data.toString()));
+                });
+            });
+            http_request.on('error', function(error) {
+                res.send(500, {errorMessage: "An unexpected error occurred"});
+            });
+            http_request.write(req.body);
+            http_request.end();
+        }
+    }
 };
 module.exports = Utils;
