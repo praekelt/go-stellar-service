@@ -31,11 +31,15 @@ var Utils = {
 
     wallet_proxy: function(path, method) {
         return function(req, res, next) {
+            if (!path.test(req.path())) {
+                res.send(500, {errorMessage: "An unexpected error occurred"});
+                return;
+            }
             var http_request = Http.request({
                 hostname: Config.WALLET_SERVER,
                 port: Config.WALLET_PORT,
                 method: method,
-                path: path,
+                path: req.path(),
                 headers: req.headers
             },
             function(http_res) {
@@ -44,6 +48,7 @@ var Utils = {
                 });
             });
             http_request.on('error', function(error) {
+                console.error(error);
                 res.send(500, {errorMessage: "An unexpected error occurred"});
             });
             http_request.write(req.body);

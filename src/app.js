@@ -11,7 +11,8 @@ server.use(Restify.bodyParser({ mapParams: true}));
 
 
 server.post('/v1/payment', PaymentController.send);
-server.post('/v1/wallet', ControllersUtil.wallet_proxy('/v1/wallet', 'POST'));
+server.post('/v1/wallet', ControllersUtil.wallet_proxy(/\/v1\/wallet/, 'POST'));
+server.get('/v1/wallet/:msisdn', ControllersUtil.wallet_proxy(/\/v1\/wallet\/.*\/address/, 'GET'));
 
 server.listen(Config.PORT, function() {
 	console.log('Listening for requests');
